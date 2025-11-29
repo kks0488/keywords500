@@ -2,7 +2,6 @@ import os
 import datetime
 import subprocess
 import psutil
-import signal # 프로세스 종료 시그널을 위해 추가
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,13 +11,12 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 # --- 설정 ---
-# 데이터베이스 접속 정보 (scrape_keywords.py와 동일하게 가져옴)
-# 보안을 위해 환경 변수 사용 강력 권장
-DB_HOST = "192.168.1.148"
-DB_NAME = "postgres"
-DB_USER = "postgres"
-DB_PASSWORD = "Wldms1701!!"
-DB_PORT = "5432"
+# 데이터베이스 접속 정보 (환경 변수 사용 권장)
+DB_HOST = os.environ.get("DB_HOST", "192.168.1.148")
+DB_NAME = os.environ.get("DB_NAME", "postgres")
+DB_USER = os.environ.get("DB_USER", "postgres")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "Wldms1701!!")
+DB_PORT = os.environ.get("DB_PORT", "5432")
 
 # 스크래핑 스크립트 경로
 SCRAPE_SCRIPT_PATH = "/home/kkaemo/projects/keywords500/scrape_keywords.py"

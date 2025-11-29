@@ -25,12 +25,12 @@ TARGET_URL = "https://datalab.naver.com/shoppingInsight/sCategory.naver"
 INTER_DATE_SLEEP_SECONDS = 10 # 각 날짜 처리 사이 대기 시간 (초)
 
 # --- PostgreSQL 접속 정보 ---
-# 중요: 비밀번호를 코드에 직접 작성하는 것은 보안상 매우 취약합니다.
-DB_HOST = "192.168.1.148"
-DB_NAME = "postgres" # 실제 DB 이름 확인!
-DB_USER = "postgres"
-DB_PASSWORD = "Wldms1701!!"
-DB_PORT = "5432"
+# 환경 변수에서 읽거나 기본값 사용
+DB_HOST = os.environ.get("DB_HOST", "192.168.1.148")
+DB_NAME = os.environ.get("DB_NAME", "postgres")
+DB_USER = os.environ.get("DB_USER", "postgres")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "Wldms1701!!")
+DB_PORT = os.environ.get("DB_PORT", "5432")
 
 # --- CSS 선택자 (사용자 제공 HTML 기반, 필요시 실제 사이트에서 F12로 재확인) ---
 # 카테고리

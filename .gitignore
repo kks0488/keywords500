@@ -59,4 +59,14 @@ coverage.xml
 # 기타 프로젝트 특정 파일
 server.log
 .DS_Store
-node_modules/ 
+node_modules/
+
+# 민감한 정보 파일
+.env
+*.json
+!package.json
+!package-lock.json
+
+# Google Cloud 서비스 계정 키
+*-*.json
+upbeat-object-*.json 
