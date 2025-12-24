@@ -18,12 +18,13 @@ DB_USER = os.environ.get("DB_USER", "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "Wldms1701!!")
 DB_PORT = os.environ.get("DB_PORT", "5432")
 
-# 스크래핑 스크립트 경로
-SCRAPE_SCRIPT_PATH = "/home/kkaemo/projects/keywords500/scrape_keywords.py"
-PYTHON_EXECUTABLE_PATH = "/home/kkaemo/projects/keywords500/.venv/bin/python" # 가상환경 Python 경로 확인 필요
+# 스크래핑 스크립트 경로 (Docker: /app, Local: /home/kkaemo/projects/keywords500)
+APP_BASE_PATH = os.environ.get("APP_BASE_PATH", "/app")
+SCRAPE_SCRIPT_PATH = os.path.join(APP_BASE_PATH, "scrape_keywords.py")
+PYTHON_EXECUTABLE_PATH = os.environ.get("PYTHON_EXECUTABLE", "python")  # Docker에서는 시스템 Python 사용
 
 # 로그 파일 경로
-LOG_FILE_PATH = "/home/kkaemo/projects/keywords500/scrape_run.log"
+LOG_FILE_PATH = os.path.join(APP_BASE_PATH, "scrape_run.log")
 
 # FastAPI 앱 설정
 app = FastAPI(title="Keyword Dashboard")

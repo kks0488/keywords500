@@ -1,0 +1,36 @@
+# Virtual environments
+.venv/
+venv/
+__pycache__/
+
+# Logs (큰 파일들)
+*.log
+cron.log
+scrape_run.log
+dashboard_server.log
+server.log
+
+# Backup files
+csv_backups/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+._*
+
+# Systemd (Docker에서 불필요)
+*.service
+
+# Google Cloud 인증키 (보안상 제외 - 필요시 환경 변수로 주입)
+*.json
+
+# 임시 파일
+*.pyc
+*.pyo
