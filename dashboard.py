@@ -138,8 +138,10 @@ async def run_scrape_script(scrape_request: ScrapeRequest):
         if not os.path.exists(SCRAPE_SCRIPT_PATH):
             raise HTTPException(status_code=500, detail=f"스크립트 파일을 찾을 수 없습니다: {SCRAPE_SCRIPT_PATH}")
 
-        # Python 실행 파일 존재 확인
-        if not os.path.exists(PYTHON_EXECUTABLE_PATH):
+        # Python 실행 파일 존재 확인 (shutil.which로 PATH에서 검색)
+        import shutil
+        python_path = shutil.which(PYTHON_EXECUTABLE_PATH) or PYTHON_EXECUTABLE_PATH
+        if not shutil.which(PYTHON_EXECUTABLE_PATH) and not os.path.exists(PYTHON_EXECUTABLE_PATH):
             raise HTTPException(status_code=500, detail=f"Python 실행 파일을 찾을 수 없습니다: {PYTHON_EXECUTABLE_PATH}")
 
         cmd = [PYTHON_EXECUTABLE_PATH, SCRAPE_SCRIPT_PATH]
