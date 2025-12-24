@@ -7,7 +7,8 @@ WORKDIR /app
 # 시스템 의존성 설치 (psycopg2-binary용)
 RUN apt-get update && apt-get install -y \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/local/bin/python3 /usr/local/bin/python
 
 # 의존성 파일 복사 및 설치
 COPY requirements.txt .
