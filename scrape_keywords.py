@@ -32,12 +32,18 @@ DB_USER = os.environ.get("DB_USER", "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "Wldms1701!!")
 DB_PORT = os.environ.get("DB_PORT", "5432")
 
+# --- 카테고리 설정 ---
+# 수집할 카테고리 목록 (category_id, name, selector)
+CATEGORIES = [
+    {'id': '50000169', 'name': '남성의류', 'selector': "div.set_period.category > div.select:nth-of-type(2) ul.select_list a.option[data-cid='50000169']"},
+    {'id': '50000167', 'name': '여성의류', 'selector': "div.set_period.category > div.select:nth-of-type(2) ul.select_list a.option[data-cid='50000167']"},
+]
+
 # --- CSS 선택자 (사용자 제공 HTML 기반, 필요시 실제 사이트에서 F12로 재확인) ---
 # 카테고리
 CATEGORY_1ST_BTN_SELECTOR = "div.set_period.category > div.select:nth-of-type(1) > span.select_btn"
 FASHION_CLOTHING_OPTION_SELECTOR = "div.set_period.category > div.select:nth-of-type(1) ul.select_list a.option[data-cid='50000000']"
 CATEGORY_2ND_BTN_SELECTOR = "div.set_period.category > div.select:nth-of-type(2) > span.select_btn"
-MENS_CLOTHING_OPTION_SELECTOR = "div.set_period.category > div.select:nth-of-type(2) ul.select_list a.option[data-cid='50000169']"
 
 # 기간
 TIMEFRAME_BTN_SELECTOR = "div.set_period > div.select.w4 > span.select_btn"
@@ -362,7 +368,7 @@ def scrape_page_keywords(driver):
         logger.error(f"페이지 키워드 스크랩 중 오류: {e}")
     return keywords_on_page
 
-def save_to_db(keywords_data, scrape_date_str):
+def save_to_db(keywords_data, scrape_date_str, category_id='50000169'):
     """수집된 데이터를 PostgreSQL에 저장"""
     logger = logging.getLogger()
     conn = None
@@ -371,9 +377,9 @@ def save_to_db(keywords_data, scrape_date_str):
         conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD, port=DB_PORT)
         cur = conn.cursor()
         logger.info("데이터베이스 연결 성공.")
-        logger.info(f"{scrape_date_str} 날짜의 기존 키워드 데이터 삭제 시도...")
-        delete_sql = "DELETE FROM daily_keywords WHERE scrape_date = %s AND category_id = '50000169';"
-        cur.execute(delete_sql, (scrape_date_str,))
+        logger.info(f"{scrape_date_str} 날짜의 기존 키워드 데이터 삭제 시도... (category_id: {category_id})")
+        delete_sql = "DELETE FROM daily_keywords WHERE scrape_date = %s AND category_id = %s;"
+        cur.execute(delete_sql, (scrape_date_str, category_id))
         logger.info(f"삭제된 행 개수: {cur.rowcount}")
         insert_sql = """
             INSERT INTO daily_keywords (scrape_date, keyword_rank, keyword, category_id)
@@ -381,7 +387,7 @@ def save_to_db(keywords_data, scrape_date_str):
             ON CONFLICT (scrape_date, keyword_rank, category_id) DO NOTHING;
         """
         values_to_insert = [
-            (scrape_date_str, rank + 1, keyword, '50000169')
+            (scrape_date_str, rank + 1, keyword, category_id)
             for rank, keyword in enumerate(keywords_data)
         ]
         if values_to_insert:
@@ -409,32 +415,41 @@ def save_to_db(keywords_data, scrape_date_str):
             logger.info("데이터베이스 연결 종료.")
 
 def scrape_single_date(driver, target_date):
-    """지정된 날짜의 TOP 500 키워드를 스크랩하고 저장"""
+    """지정된 날짜의 TOP 500 키워드를 모든 카테고리에 대해 스크랩하고 저장"""
     logger = logging.getLogger()
     logger.info(f"\n{'='*20} {target_date.strftime('%Y-%m-%d')} 데이터 수집 시작 {'='*20}")
     target_year = target_date.year
     target_month = target_date.month
     target_day = target_date.day
     scrape_date_str_for_db = target_date.strftime("%Y-%m-%d")
-    all_keywords = []
     max_pages = 25
+    overall_success = True
 
-    try:
-        # --- 페이지 초기화: 매번 URL 재접속 --- 
-        logger.info(f"페이지 초기화 (재접속): {TARGET_URL}")
-        driver.get(TARGET_URL)
-        time.sleep(3) # 페이지 로딩 대기 (필요시 시간 조절)
+    # 각 카테고리별로 수집
+    for category in CATEGORIES:
+        category_id = category['id']
+        category_name = category['name']
+        category_selector = category['selector']
+        all_keywords = []
+        
+        logger.info(f"\n--- [{category_name}] 카테고리 수집 시작 (ID: {category_id}) ---")
 
-        # --- 설정 적용 (카테고리, 기간 등은 한번만 해도 될 수 있으나, 안정성을 위해 매번 수행 고려) ---
-        # 1. 카테고리 선택 (패션의류 > 남성의류)
-        logger.info("카테고리 선택 중...")
-        if not click_element(driver, CATEGORY_1ST_BTN_SELECTOR): raise Exception("패션의류 버튼 클릭 실패")
-        if not click_element(driver, FASHION_CLOTHING_OPTION_SELECTOR): raise Exception("패션의류 옵션 클릭 실패")
-        time.sleep(1)
-        if not click_element(driver, CATEGORY_2ND_BTN_SELECTOR): raise Exception("2차 분류 버튼 클릭 실패")
-        if not click_element(driver, MENS_CLOTHING_OPTION_SELECTOR): raise Exception("남성의류 옵션 클릭 실패")
-        logger.info("카테고리 선택 완료.")
-        time.sleep(1)
+        try:
+            # --- 페이지 초기화: 매번 URL 재접속 --- 
+            logger.info(f"페이지 초기화 (재접속): {TARGET_URL}")
+            driver.get(TARGET_URL)
+            time.sleep(3) # 페이지 로딩 대기 (필요시 시간 조절)
+
+            # --- 설정 적용 ---
+            # 1. 카테고리 선택 (패션의류 > 해당 카테고리)
+            logger.info(f"카테고리 선택 중: {category_name}")
+            if not click_element(driver, CATEGORY_1ST_BTN_SELECTOR): raise Exception("패션의류 버튼 클릭 실패")
+            if not click_element(driver, FASHION_CLOTHING_OPTION_SELECTOR): raise Exception("패션의류 옵션 클릭 실패")
+            time.sleep(1)
+            if not click_element(driver, CATEGORY_2ND_BTN_SELECTOR): raise Exception("2차 분류 버튼 클릭 실패")
+            if not click_element(driver, category_selector): raise Exception(f"{category_name} 옵션 클릭 실패")
+            logger.info(f"카테고리 선택 완료: {category_name}")
+            time.sleep(1)
 
         # 2. 기간 '일간' 선택
         logger.info("기간 선택 중: 일간")
@@ -495,28 +510,34 @@ def scrape_single_date(driver, target_date):
             except NoSuchElementException: logger.warning("다음 페이지 버튼을 찾을 수 없음 (마지막 페이지일 수 있음)."); break
             except Exception as e_next: logger.error(f"다음 페이지 이동 중 오류: {e_next}"); break
 
-        logger.info(f"\n총 {len(all_keywords)}개의 키워드 수집 완료 ({target_date.strftime('%Y-%m-%d')}).")
+            logger.info(f"\n총 {len(all_keywords)}개의 키워드 수집 완료 ({target_date.strftime('%Y-%m-%d')} - {category_name}).")
 
-        # 6.5. CSV 파일로 백업 저장
-        if all_keywords:
-            if not save_to_csv(all_keywords, scrape_date_str_for_db):
-                 logger.warning("경고: CSV 백업에 실패했습니다.")
+            # 6.5. CSV 파일로 백업 저장
+            if all_keywords:
+                csv_filename = f"{scrape_date_str_for_db}_{category_id}"
+                if not save_to_csv(all_keywords, csv_filename):
+                     logger.warning("경고: CSV 백업에 실패했습니다.")
 
-        # 7. 데이터베이스에 저장
-        if all_keywords:
-            if not save_to_db(all_keywords, scrape_date_str_for_db):
-                 logger.error(f"경고: 데이터베이스 저장에 실패했습니다 ({target_date.strftime('%Y-%m-%d')}).")
-        else:
-             logger.info("수집된 키워드가 없어 저장할 내용이 없습니다.")
+            # 7. 데이터베이스에 저장
+            if all_keywords:
+                if not save_to_db(all_keywords, scrape_date_str_for_db, category_id):
+                     logger.error(f"경고: 데이터베이스 저장에 실패했습니다 ({target_date.strftime('%Y-%m-%d')} - {category_name}).")
+                     overall_success = False
+            else:
+                 logger.info("수집된 키워드가 없어 저장할 내용이 없습니다.")
 
-        logger.info(f"{'='*20} {target_date.strftime('%Y-%m-%d')} 데이터 수집 완료 {'='*20}")
-        return True # 성공 시 True 반환
+            logger.info(f"--- [{category_name}] 카테고리 수집 완료 ---")
+            
+            # 카테고리 간 대기 시간 (밴 방지)
+            time.sleep(5)
 
-    except Exception as e:
-        logger.exception(f"오류: {target_date.strftime('%Y-%m-%d')} 데이터 처리 중 오류 발생: {e}") # logger.exception 사용
-        # import traceback # 필요 없음
-        # traceback.print_exc() # 필요 없음
-        return False # 실패 시 False 반환
+        except Exception as e:
+            logger.exception(f"오류: {target_date.strftime('%Y-%m-%d')} - {category_name} 데이터 처리 중 오류 발생: {e}")
+            overall_success = False
+            continue  # 다음 카테고리 계속 처리
+
+    logger.info(f"{'='*20} {target_date.strftime('%Y-%m-%d')} 전체 수집 완료 {'='*20}")
+    return overall_success
 
 
 # --- 메인 실행 로직 --- 
