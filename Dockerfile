@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     unzip \
+    curl \
     # Chrome 의존성
     libnss3 \
     libxss1 \
@@ -18,11 +19,13 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libdrm2 \
     libgbm1 \
-    # Chrome 설치
-    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && rm -rf /var/lib/apt/lists/*
+
+# Chrome 직접 다운로드 및 설치
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get update \
-    && apt-get install -y google-chrome-stable \
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
+    && rm google-chrome-stable_current_amd64.deb \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/local/bin/python3 /usr/local/bin/python
 
